@@ -32,29 +32,47 @@ impl Ray {
         println!("v_tmpp: {:?}", v_tmpp); 
     
         let t = (1.0 / Vec3::dot(v_tmpd, v1)) * Vec3::dot(v_tmpp, v2); 
-    
-        Some(self.p + t * self.d)
+        
+        if t >= 0.0 { 
+            Some(self.p + t * self.d)
+        } else {
+            None
+        }
     }
 }
 
-fn main() {
-    let buffer: [u8; 30000] = [100; 30000];
-
-    let ray = Ray {
+#[test]
+fn ray_triangle_intersection() {
+    let ray1 = Ray {
         p: Point3::new(0.0, 0.0, 0.0),
         d: Vec3::new(0.0, 0.0, 1.0),
     };
 
-    let triangle = Triangle {
+    let triangle1 = Triangle {
         p0: Point3::new(-1.0, -1.0, 2.0),
         p1: Point3::new(1.0, -1.0, 2.0),
         p2: Point3::new(0.0, 1.0, 2.0),
     };
 
-    match ray.intersect_triangle(&triangle) {
-        Some(intersect) => println!("{} {} {}", intersect.x, intersect.y, intersect.z),
-        None => (),
+    match ray1.intersect_triangle(&triangle1) {
+        Some(p) => assert_eq!(p, Point3::new(0.0, 0.0, 2.0)), 
+        None => assert!(false),
     }
+
+    let triangle2 = Triangle {
+        p0: Point3::new(-1.0, -1.0, -2.0),
+        p1: Point3::new(1.0, -1.0, -2.0),
+        p2: Point3::new(0.0, 1.0, -2.0),
+    };
+
+    match ray1.intersect_triangle(&triangle2) {
+        Some(_) => assert!(false),
+        None => assert!(true),
+    }
+}
+
+fn main() {
+    let buffer: [u8; 30000] = [100; 30000];
 
 
     image::save_buffer("/mnt/disk2/rust/image.png", &buffer, 100, 100, image::ColorType::Rgb8)
