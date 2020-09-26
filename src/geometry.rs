@@ -24,12 +24,11 @@ impl<T: Float> Vec3<T> {
         v1.x * v2.x + v1.y * v2.y + v1.z * v2.z
     }
 
-    // Left-handed coordinate system.
     pub fn cross(v1: Self, v2: Self) -> Self {
         assert!(!v1.has_nans() && !v2.has_nans());
         Self {
             x: v1.y * v2.z - v1.z * v2.y,
-            y: v1.z * v2.x - v1.x * v2.z,
+            y: v1.z * v2.x - v1.x * v2.z, 
             z: v1.x * v2.y - v1.y * v2.x,
         }
     }
@@ -100,6 +99,18 @@ impl<T: Float> Mul<T> for Vec3<T> {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
+        }
+    }
+}
+
+impl Mul<Vec3<f64>> for f64 {
+    type Output = Vec3<f64>;
+
+    fn mul(self, rhs: Vec3<f64>) -> Self::Output {
+        Vec3::<f64> {
+            x: self * rhs.x,
+            y: self * rhs.y,
+            z: self * rhs.z,
         }
     }
 }
@@ -217,22 +228,14 @@ impl<T: Float> AddAssign for Point3<T> {
 }
 
 impl<T: Float> Sub for Point3<T> {
-    type Output = Self;
+    type Output = Vec3<T>;
 
     fn sub(self, other: Self) -> Self::Output {
-        Self {
+        Self::Output {
             x: self.x - other.x,
             y: self.y - other.y,
             z: self.z - other.z,
         }
-    }
-}
-
-impl<T: Float> SubAssign for Point3<T> {
-    fn sub_assign(&mut self, other: Self) {
-        self.x = self.x - other.x; 
-        self.y = self.y - other.y; 
-        self.z = self.z - other.z; 
     }
 }
 
