@@ -85,9 +85,45 @@ fn ray_triangle_intersection() {
         Some(_) => assert!(false),
         None => assert!(true),
     }
+}
 
-    // Add test cases where the ray intersects the plane of the triangle, but where the point of
-    // intersection isn't in the triangle.
+#[test]
+fn ray_triangle_intersection_no_intersection() {
+    let triangle = Triangle {
+        p0: Point3::new(-1.0, -1.0, 2.0),
+        p1: Point3::new(1.0, -1.0, 2.0),
+        p2: Point3::new(0.0, 1.0, 2.0),
+    };
+
+    let ray1 = Ray {
+        p: Point3::new(-2.0, 2.0, 0.0),
+        d: Vec3::new(0.0, 0.0, 1.0),
+    };
+
+    match ray1.intersect_triangle(&triangle) {
+        Some(_) => assert!(false),
+        None => assert!(true),
+    }
+
+    let ray2 = Ray {
+        p: Point3::new(2.0, 2.0, 0.0),
+        d: Vec3::new(0.0, 0.0, 1.0),
+    };
+
+    match ray2.intersect_triangle(&triangle) {
+        Some(_) => assert!(false),
+        None => assert!(true),
+    }
+
+    let ray3 = Ray {
+        p: Point3::new(0.0, -2.0, 0.0),
+        d: Vec3::new(0.0, 0.0, 1.0),
+    };
+
+    match ray3.intersect_triangle(&triangle) {
+        Some(_) => assert!(false),
+        None => assert!(true),
+    }
 }
 
 fn main() {
