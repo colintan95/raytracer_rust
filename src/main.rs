@@ -120,21 +120,23 @@ fn ray_triangle_intersection_no_intersection() {
 }
 
 fn main() {
-    let img_width = 100;
-    let img_height = 100;
-    let img_num_pixels = img_width * img_height;
+    let img_width = 800;
+    let img_height = 800;
+    let num_pixels = img_width * img_height;
 
-    let mut buffer = vec![100u8; img_num_pixels];
-    let mut rays = Vec::<Ray>::with_capacity(img_num_pixels);
+    let mut buffer = vec![100u8; num_pixels];
+    let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
-    for i in 0..100 {
-        for j in 0..100 {
-            let x = (i as f32) / 100.0 * 10.0 - 5.0;
-            let y = (j as f32) / 100.0 * 10.0 - 5.0;
+    for i in 0..img_width {
+        for j in 0..img_height {
+            // Converts the (i, j) coordinates of the screen to the (x, y) coordinates of the world
+            // space.
+            let x = (j as f32) / (img_width as f32) * 2.0 - 1.0;
+            let y = -((i as f32) / (img_height as f32) * 2.0 - 1.0);
 
             let ray = Ray {
-                p: Point3::new(x, y, 5.0),
-                d: Vec3::new(0.0, 0.0, 1.0),
+                p: Point3::new(x, y, 1.0),
+                d: Vec3::normalize(Vec3::new(x, y, 1.0)),
             };
 
             rays.push(ray);
@@ -142,13 +144,13 @@ fn main() {
     } 
 
     let triangle = Triangle {
-        p0: Point3::new(-2.5, -2.5, 10.0),
-        p1: Point3::new(2.5, -2.5, 10.0),
-        p2: Point3::new(0.0, 2.5, 10.0),
+        p0: Point3::new(-5.0, -5.0, 10.0),
+        p1: Point3::new(5.0, -5.0, 10.0),
+        p2: Point3::new(0.0, 5.0, 10.0),
     };
 
-    for i in 0..100 {
-        for j in 0..100 {
+    for i in 0..img_width {
+        for j in 0..img_height {
             match rays[i * img_width + j].intersect_triangle(&triangle) {
                 Some(_) => buffer[i * img_width + j] = 255,
                 None => buffer[i * img_width + j] = 100,
