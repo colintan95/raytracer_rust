@@ -21,17 +21,33 @@ impl Ray {
         let v1 = triangle.p1 - triangle.p0;
         let v2 = triangle.p2 - triangle.p0;
     
-        println!("vp: {:?}", vp);
-        println!("v1: {:?}", v1);
-        println!("v2: {:?}", v2); 
+        // println!("vp: {:?}", vp);
+        // println!("v1: {:?}", v1);
+        // println!("v2: {:?}", v2); 
     
         let v_tmpd = Vec3::cross(self.d, v2); 
         let v_tmpp = Vec3::cross(vp, v1); 
     
-        println!("v_tmpd: {:?}", v_tmpd);
-        println!("v_tmpp: {:?}", v_tmpp); 
+        // println!("v_tmpd: {:?}", v_tmpd);
+        // println!("v_tmpp: {:?}", v_tmpp); 
+
+        let s = 1.0 / Vec3::dot(v_tmpd, v1);
+
+        let u = s * Vec3::dot(v_tmpd, vp);
+        if u < 0.0 || u > 1.0 {
+            return None;
+        }
+
+        let v = s * Vec3::dot(v_tmpp, self.d);
+        if v < 0.0 || v > 1.0 {
+            return None;
+        }
+
+        if u + v < 0.0 || u + v > 1.0 {
+            return None;
+        }
     
-        let t = (1.0 / Vec3::dot(v_tmpd, v1)) * Vec3::dot(v_tmpp, v2); 
+        let t = s * Vec3::dot(v_tmpp, v2); 
         
         if t >= 0.0 { 
             Some(self.p + t * self.d)
@@ -69,12 +85,49 @@ fn ray_triangle_intersection() {
         Some(_) => assert!(false),
         None => assert!(true),
     }
+
+    // Add test cases where the ray intersects the plane of the triangle, but where the point of
+    // intersection isn't in the triangle.
 }
 
 fn main() {
-    let buffer: [u8; 30000] = [100; 30000];
+    let img_width = 100;
+    let img_height = 100;
+    let img_num_pixels = img_width * img_height;
 
+    let mut buffer = vec![100u8; img_num_pixels];
+    let mut rays = Vec::<Ray>::with_capacity(img_num_pixels);
 
-    image::save_buffer("/mnt/disk2/rust/image.png", &buffer, 100, 100, image::ColorType::Rgb8)
+    for i in 0..100 {
+        for j in 0..100 {
+            let x = (i as f64) / 100.0 * 10.0 - 5.0;
+            let y = (j as f64) / 100.0 * 10.0 - 5.0;
+
+            let ray = Ray {
+                p: Point3::new(x, y, 5.0),
+                d: Vec3::new(0.0, 0.0, 1.0),
+            };
+
+            rays.push(ray);
+        }
+    } 
+
+    let triangle = Triangle {
+        p0: Point3::new(-2.5, -2.5, 10.0),
+        p1: Point3::new(2.5, -2.5, 10.0),
+        p2: Point3::new(0.0, 2.5, 10.0),
+    };
+
+    for i in 0..100 {
+        for j in 0..100 {
+            match rays[i * img_width + j].intersect_triangle(&triangle) {
+                Some(_) => buffer[i * img_width + j] = 255,
+                None => buffer[i * img_width + j] = 100,
+            }
+        }
+    }
+
+    image::save_buffer("/mnt/disk2/rust/image.png", &buffer, img_width as u32, img_height as u32, 
+                       image::ColorType::L8)
         .unwrap(); 
 }
