@@ -181,3 +181,116 @@ impl IndexMut<usize> for Vec3 {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn has_nans() {
+        let v = Vec3::new(0.0, 0.0, f32::NAN);
+        assert!(v.has_nans());
+    }
+
+    #[test]
+    fn lengths() {
+        let v = Vec3::new(0.0, 0.0, 0.0);
+        assert_eq!(v.len_sq(), 0.0);
+        assert_eq!(v.len(), 0.0);
+
+        let v = Vec3::new(1.0, -2.0, 3.0);
+        assert_eq!(v.len_sq(), 14.0);
+        assert_eq!(v.len(), 14.0_f32.sqrt());
+
+        // TODO: Deal with numerical inaccuracies - this test returns 0.99... instead of 1.0.
+        // assert_eq!(Vec3::normalize(v).len(), 1.0);
+    }
+
+    #[test]
+    fn arithmetic_ops() {
+        let v1 = Vec3::new(1.0, -1.0, 0.0);
+        let v2 = Vec3::new(-1.0, 1.0, 0.0);
+        let v3 = -v1;
+
+        let v = v1 + v2;
+        assert_eq!(v, Vec3::zeroes());
+
+        let mut v_mut = v1;
+        v_mut += v2;
+        assert_eq!(v_mut, Vec3::zeroes()); 
+
+        let v = v1 - v1;
+        assert_eq!(v, Vec3::zeroes());
+
+        let mut v_mut = v1;
+        v_mut -= v1;
+        assert_eq!(v_mut, Vec3::zeroes());
+        
+        let v = v1 + v3;
+        assert_eq!(v, Vec3::zeroes());
+    }
+
+    #[test]
+    fn scalar_ops() {
+        let v1 = Vec3::new(1.0, -1.0, 0.0);
+        
+        let v = v1 * 2.0;
+        assert_eq!(v, Vec3::new(2.0, -2.0, 0.0));
+
+        let mut v_mut = v1;
+        v_mut *= 2.0;
+        assert_eq!(v_mut, Vec3::new(2.0, -2.0, 0.0));
+
+        let v = v1 / 2.0;
+        assert_eq!(v, Vec3::new(0.5, -0.5, 0.0));
+
+        let mut v_mut = v1;
+        v_mut /= 2.0;
+        assert_eq!(v, Vec3::new(0.5, -0.5, 0.0));
+    }
+
+    #[test]
+    fn index_ops() {
+        let v1 = Vec3::new(1.0, -1.0, 0.0);
+
+        assert_eq!(v1[0], 1.0);
+        assert_eq!(v1[1], -1.0);
+        assert_eq!(v1[2], 0.0 );
+
+        let mut v_mut = v1;
+        v_mut[0] = 0.0;
+        v_mut[1] = 1.0;
+        v_mut[2] = -1.0;
+        assert_eq!(v_mut[0], 0.0);
+        assert_eq!(v_mut[1], 1.0);
+        assert_eq!(v_mut[2], -1.0);
+    }
+
+    #[test]
+    fn cmp_ops() {
+        let v1 = Vec3::new(0.0, 1.0, 0.0);
+        let v2 = Vec3::new(0.0, 1.0, 1.0);
+        let v3 = Vec3::new(0.0, 1.0, 0.0);
+
+        assert!(v1 != v2);
+        assert!(v1 == v3);
+    }
+
+    #[test]
+    fn dot_prod() {
+        let v1 = Vec3::new(-1.0, 0.0, 1.0);
+        let v2 = Vec3::new(1.0, 1.0, 2.0);
+
+        assert_eq!(Vec3::dot(v1, v2), 1.0);
+    }
+
+    #[test]
+    fn cross_prod() {
+        let v1 = Vec3::new(1.0, 0.0, 0.0);
+        let v2 = Vec3::new(0.0, 0.0, 1.0);
+
+        assert_eq!(Vec3::cross(v1, v2), Vec3::new(0.0, -1.0, 0.0));
+        assert_eq!(Vec3::cross(v2, v1), Vec3::new(0.0, 1.0, 0.0));
+
+        assert_eq!(Vec3::cross(v1, v1), Vec3::zeroes());
+    }
+}
