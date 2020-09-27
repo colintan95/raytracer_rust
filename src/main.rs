@@ -119,6 +119,35 @@ fn ray_triangle_intersection_no_intersection() {
     }
 }
 
+struct Sphere {
+   c: Point3, // center
+   r: f32, // radius 
+}
+
+impl Ray {
+    fn intersect_sphere(&self, sphere: &Sphere) -> Option<Point3> {
+        let v = self.p - sphere.c;
+
+        let a = Vec3::dot(self.d, self.d);
+        let b = 2.0 * Vec3::dot(self.d, v);
+        let c = Vec3::dot(v, v) - sphere.r.powi(2);
+
+        let discrm = b * b - 4.0 * a * c;
+
+        if discrm > 0.0 {
+            let t1 = (-b + discrm.sqrt()) / (2.0 * a);
+            let t2 = (-b - discrm.sqrt()) / (2.0 * a);
+
+            Some(self.p + t1.min(t2) * self.d)
+        } else if discrm == 0.0 {
+            let t = -b / (2.0 * a);
+            Some(self.p + t * self.d) 
+        } else {
+            None
+        }
+    }
+}
+
 fn main() {
     let img_width = 800;
     let img_height = 800;
@@ -143,15 +172,14 @@ fn main() {
         }
     } 
 
-    let triangle = Triangle {
-        p0: Point3::new(-5.0, -5.0, 10.0),
-        p1: Point3::new(5.0, -5.0, 10.0),
-        p2: Point3::new(0.0, 5.0, 10.0),
+    let sphere = Sphere {
+        c: Point3::new(0.0, 0.0, 10.0),
+        r: 5.0,
     };
 
     for i in 0..img_width {
         for j in 0..img_height {
-            match rays[i * img_width + j].intersect_triangle(&triangle) {
+            match rays[i * img_width + j].intersect_sphere(&sphere) {
                 Some(_) => buffer[i * img_width + j] = 255,
                 None => buffer[i * img_width + j] = 100,
             }
