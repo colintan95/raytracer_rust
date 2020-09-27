@@ -129,8 +129,8 @@ fn main() {
 
     for i in 0..100 {
         for j in 0..100 {
-            let x = (i as f64) / 100.0 * 10.0 - 5.0;
-            let y = (j as f64) / 100.0 * 10.0 - 5.0;
+            let x = (i as f32) / 100.0 * 10.0 - 5.0;
+            let y = (j as f32) / 100.0 * 10.0 - 5.0;
 
             let ray = Ray {
                 p: Point3::new(x, y, 5.0),
