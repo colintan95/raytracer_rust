@@ -21,15 +21,8 @@ impl Ray {
         let v1 = triangle.p1 - triangle.p0;
         let v2 = triangle.p2 - triangle.p0;
     
-        // println!("vp: {:?}", vp);
-        // println!("v1: {:?}", v1);
-        // println!("v2: {:?}", v2); 
-    
         let v_tmpd = Vec3::cross(self.d, v2); 
         let v_tmpp = Vec3::cross(vp, v1); 
-    
-        // println!("v_tmpd: {:?}", v_tmpd);
-        // println!("v_tmpp: {:?}", v_tmpp); 
 
         let s = 1.0 / Vec3::dot(v_tmpd, v1);
 
