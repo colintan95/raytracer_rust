@@ -125,7 +125,8 @@ struct Sphere {
 }
 
 impl Ray {
-    fn intersect_sphere(&self, sphere: &Sphere) -> Option<Point3> {
+    // If there's an intersection, returns the point of intersection and the normal.
+    fn intersect_sphere(&self, sphere: &Sphere) -> Option<(Point3, Vec3)> {
         let v = self.p - sphere.c;
 
         let a = Vec3::dot(self.d, self.d);
@@ -133,18 +134,23 @@ impl Ray {
         let c = Vec3::dot(v, v) - sphere.r.powi(2);
 
         let discrm = b * b - 4.0 * a * c;
+        
+        if discrm < 0.0 {
+            return None;
+        }
 
-        if discrm > 0.0 {
+        let t = if discrm > 0.0 {
             let t1 = (-b + discrm.sqrt()) / (2.0 * a);
             let t2 = (-b - discrm.sqrt()) / (2.0 * a);
-
-            Some(self.p + t1.min(t2) * self.d)
-        } else if discrm == 0.0 {
-            let t = -b / (2.0 * a);
-            Some(self.p + t * self.d) 
+            t1.min(t2)
         } else {
-            None
-        }
+            -b / (2.0 * a)
+        };
+
+        let pi = self.p + t * self.d;
+        let n = Vec3::normalize(pi - sphere.c);
+
+        Some((pi, n))
     }
 }
 
@@ -180,7 +186,12 @@ fn main() {
     for i in 0..img_width {
         for j in 0..img_height {
             match rays[i * img_width + j].intersect_sphere(&sphere) {
-                Some(_) => buffer[i * img_width + j] = 255,
+                Some((_, n)) => {
+                    let mut a = Vec3::dot(n, Vec3::new(0.0, 0.0, -1.0));
+                    a = a.max(0.0);
+                     
+                    buffer[i * img_width + j] = (255.0 * a) as u8;
+                },
                 None => buffer[i * img_width + j] = 100,
             }
         }
