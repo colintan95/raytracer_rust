@@ -183,14 +183,19 @@ fn main() {
         r: 5.0,
     };
 
+    let light_pos = Point3::new(0.0, 5.0, 2.5);
+
     for i in 0..img_width {
         for j in 0..img_height {
             match rays[i * img_width + j].intersect_sphere(&sphere) {
-                Some((_, n)) => {
-                    let mut a = Vec3::dot(n, Vec3::new(0.0, 0.0, -1.0));
-                    a = a.max(0.0);
-                     
-                    buffer[i * img_width + j] = (255.0 * a) as u8;
+                Some((p, n)) => {
+                    let l = Vec3::normalize(light_pos - p);
+                    let int_d = (Vec3::dot(l, n)).max(0.0);
+                    let int_a = 0.3;
+                    
+                    let int_total = num::clamp(int_a + int_d, 0.0, 1.0);
+                    
+                    buffer[i * img_width + j] = (255.0 * int_total) as u8;
                 },
                 None => buffer[i * img_width + j] = 100,
             }
