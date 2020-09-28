@@ -9,19 +9,24 @@ struct Ray {
     d: Vec3,
 }
 
+trait Shape {
+    // If there's an intersection, returns the point of intersection and the normal.
+    fn intersect(&self, ray: &Ray) -> Option<(Point3, Vec3)>;
+}
+
 struct Triangle {
     p0: Point3,
     p1: Point3,
     p2: Point3,
 }
 
-impl Ray {
-    fn intersect_triangle(&self, triangle: &Triangle) -> Option<Point3> {
-        let vp = self.p - triangle.p0;
-        let v1 = triangle.p1 - triangle.p0;
-        let v2 = triangle.p2 - triangle.p0;
+impl Triangle {
+    fn intersect(&self, ray: &Ray) -> Option<(Point3, Vec3)> {
+        let vp = ray.p - self.p0;
+        let v1 = self.p1 - self.p0;
+        let v2 = self.p2 - self.p0;
     
-        let v_tmpd = Vec3::cross(self.d, v2); 
+        let v_tmpd = Vec3::cross(ray.d, v2); 
         let v_tmpp = Vec3::cross(vp, v1); 
 
         let s = 1.0 / Vec3::dot(v_tmpd, v1);
@@ -31,7 +36,7 @@ impl Ray {
             return None;
         }
 
-        let v = s * Vec3::dot(v_tmpp, self.d);
+        let v = s * Vec3::dot(v_tmpp, ray.d);
         if v < 0.0 || v > 1.0 {
             return None;
         }
@@ -43,7 +48,14 @@ impl Ray {
         let t = s * Vec3::dot(v_tmpp, v2); 
         
         if t >= 0.0 { 
-            Some(self.p + t * self.d)
+            let pi = ray.p + t * ray.d;
+
+            let mut n = Vec3::normalize(Vec3::cross(v1, v2));
+            if Vec3::dot(-ray.d, n) < 0.0 {
+                n = -n;
+            }
+            // TODO: Test that the normal returned is correct.
+            Some((pi, n))
         } else {
             None
         }
@@ -63,8 +75,11 @@ fn ray_triangle_intersection() {
         p2: Point3::new(0.0, 1.0, 2.0),
     };
 
-    match ray1.intersect_triangle(&triangle1) {
-        Some(p) => assert_eq!(p, Point3::new(0.0, 0.0, 2.0)), 
+    match triangle1.intersect(&ray1) {
+        Some((p, n)) => {
+            assert_eq!(p, Point3::new(0.0, 0.0, 2.0));
+            assert_eq!(n, Vec3::new(0.0, 0.0, -1.0));
+        },
         None => assert!(false),
     }
 
@@ -74,7 +89,7 @@ fn ray_triangle_intersection() {
         p2: Point3::new(0.0, 1.0, -2.0),
     };
 
-    match ray1.intersect_triangle(&triangle2) {
+    match triangle2.intersect(&ray1) {
         Some(_) => assert!(false),
         None => assert!(true),
     }
@@ -93,7 +108,7 @@ fn ray_triangle_intersection_no_intersection() {
         d: Vec3::new(0.0, 0.0, 1.0),
     };
 
-    match ray1.intersect_triangle(&triangle) {
+    match triangle.intersect(&ray1) {
         Some(_) => assert!(false),
         None => assert!(true),
     }
@@ -103,7 +118,7 @@ fn ray_triangle_intersection_no_intersection() {
         d: Vec3::new(0.0, 0.0, 1.0),
     };
 
-    match ray2.intersect_triangle(&triangle) {
+    match triangle.intersect(&ray2) {
         Some(_) => assert!(false),
         None => assert!(true),
     }
@@ -113,7 +128,7 @@ fn ray_triangle_intersection_no_intersection() {
         d: Vec3::new(0.0, 0.0, 1.0),
     };
 
-    match ray3.intersect_triangle(&triangle) {
+    match triangle.intersect(&ray3) {
         Some(_) => assert!(false),
         None => assert!(true),
     }
@@ -124,8 +139,7 @@ struct Sphere {
    r: f32, // radius 
 }
 
-impl Sphere {
-    // If there's an intersection, returns the point of intersection and the normal.
+impl Shape for Sphere {
     fn intersect(&self, ray: &Ray) -> Option<(Point3, Vec3)> {
         let v = ray.p - self.c;
 
