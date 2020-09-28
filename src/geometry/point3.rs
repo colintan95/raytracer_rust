@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Sub, Neg, Index, IndexMut};
 use std::ops::{Mul, MulAssign, Div, DivAssign};
 
-use super::Vec3;
+use crate::geometry::Vec3;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point3 {
