@@ -6,6 +6,76 @@ mod shapes;
 use geometry::{Point3, Ray, Vec3};
 use shapes::{Shape, Sphere};
 
+struct Transform {
+    a00: f32, a01: f32, a02: f32, a03: f32,
+    a10: f32, a11: f32, a12: f32, a13: f32,
+    a20: f32, a21: f32, a22: f32, a23: f32,
+    a30: f32, a31: f32, a32: f32, a33: f32,
+}
+
+impl Transform {
+    // |theta| is in degrees.
+    fn rotate(theta: f32, axis: Vec3) -> Transform {
+        let axis = Vec3::normalize(axis);
+
+        let sin_theta = theta.to_radians().sin();
+        let cos_theta = theta.to_radians().cos();
+    
+        Transform {
+            a00: axis.x * axis.x + (1.0 - axis.x * axis.x) * cos_theta,
+            a01: axis.x * axis.y * (1.0 - cos_theta) - axis.z * sin_theta,
+            a02: axis.x * axis.z * (1.0 - cos_theta) + axis.y * sin_theta,
+            a03: 0.0,
+
+            a10: axis.x * axis.y * (1.0 - cos_theta) + axis.z * sin_theta,
+            a11: axis.y * axis.y + (1.0 - axis.y * axis.y) * cos_theta,
+            a12: axis.y * axis.z * (1.0 - cos_theta) - axis.x * sin_theta,
+            a13: 0.0,
+
+            a20: axis.x * axis.z * (1.0 - cos_theta) - axis.y * sin_theta,
+            a21: axis.y * axis.z * (1.0 - cos_theta) + axis.x * sin_theta,
+            a22: axis.z * axis.z + (1.0 - axis.z * axis.z) * cos_theta,
+            a23: 0.0,
+
+            a30: 0.0,
+            a31: 0.0,
+            a32: 0.0,
+            a33: 1.0,
+        }
+    }
+
+    fn apply(&self, v: &Vec3) -> Vec3 {
+        Vec3 {
+            x: self.a00 * v.x + self.a01 * v.y + self.a02 * v.z,
+            y: self.a10 * v.x + self.a11 * v.y + self.a12 * v.z,
+            z: self.a20 * v.x + self.a21 * v.y + self.a22 * v.z,
+        }
+    }
+}
+
+fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
+    let epsilon = 0.0001;
+    let is_equal = (v1.x - v2.x).abs() < epsilon &&     
+                   (v1.y - v2.y).abs() < epsilon &&  
+                   (v1.z - v2.z).abs() < epsilon;
+    is_equal
+}
+
+#[test]
+fn transform_test() {
+    let transform1 = Transform::rotate(90.0, Vec3::new(0.0, 1.0, 0.0));
+    let v1 = Vec3::new(0.0, 0.0, 1.0); 
+    assert!(vec_equal(&transform1.apply(&v1), &Vec3::new(1.0, 0.0, 0.0)));
+
+    let transform2 = Transform::rotate(90.0, Vec3::new(1.0, 0.0, 0.0));
+    let v2 = Vec3::new(0.0, 1.0, 0.0);
+    assert!(vec_equal(&transform2.apply(&v2), &Vec3::new(0.0, 0.0, 1.0)));
+
+    let transform3 = Transform::rotate(90.0, Vec3::new(0.0, 0.0, 1.0));
+    let v3 = Vec3::new(1.0, 0.0, 0.0);
+    assert!(vec_equal(&transform3.apply(&v3), &Vec3::new(0.0, 1.0, 0.0)));
+}
+
 fn main() {
     let img_width = 800;
     let img_height = 800;
@@ -32,7 +102,7 @@ fn main() {
 
     let sphere = Sphere {
         c: Point3::new(0.0, 0.0, 10.0),
-        r: 5.0,
+        r: 2.5,
     };
 
     let light_pos = Point3::new(0.0, 5.0, 2.5);
