@@ -51,6 +51,14 @@ impl Transform {
             z: self.a20 * v.x + self.a21 * v.y + self.a22 * v.z,
         }
     }
+
+    fn apply_pt(&self, p: &Point3) -> Point3 {
+        Point3 {
+            x: self.a00 * p.x + self.a01 * p.y + self.a02 * p.z,
+            y: self.a10 * p.x + self.a11 * p.y + self.a12 * p.z,
+            z: self.a20 * p.x + self.a21 * p.y + self.a22 * p.z,
+        }
+    }
 }
 
 fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
@@ -84,16 +92,18 @@ fn main() {
     let mut buffer = vec![100u8; num_pixels];
     let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
+    let rotate = Transform::rotate(15.0, Vec3::new(1.0, 0.0, 0.0));
+
     for i in 0..img_width {
         for j in 0..img_height {
             // Converts the (i, j) coordinates of the screen to the (x, y) coordinates of the world
             // space.
-            let x = (j as f32) / (img_width as f32) * 2.0 - 1.0;
-            let y = -((i as f32) / (img_height as f32) * 2.0 - 1.0);
+            let x = (j as f32) / (img_width as f32) * 1.0 - 0.5;
+            let y = -((i as f32) / (img_height as f32) * 1.0 - 0.5);
 
             let ray = Ray {
-                p: Point3::new(x, y, 1.0),
-                d: Vec3::normalize(Vec3::new(x, y, 1.0)),
+                p: rotate.apply_pt(&Point3::new(x, y, 1.0)),
+                d: rotate.apply(&Vec3::new(x, y, 1.0)),
             };
 
             rays.push(ray);
@@ -101,11 +111,11 @@ fn main() {
     } 
 
     let sphere = Sphere {
-        c: Point3::new(0.0, 0.0, 10.0),
+        c: Point3::new(0.0, 0.0, 20.0),
         r: 2.5,
     };
 
-    let light_pos = Point3::new(0.0, 5.0, 2.5);
+    let light_pos = Point3::new(0.0, 5.0, 5.0);
 
     for i in 0..img_width {
         for j in 0..img_height {
