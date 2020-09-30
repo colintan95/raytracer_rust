@@ -7,7 +7,7 @@ pub struct Sphere {
 }
 
 impl Shape for Sphere {
-    fn intersect(&self, ray: &Ray) -> Option<(Point3, Vec3)> {
+    fn intersect(&self, ray: &Ray) -> Option<(f32, Point3, Vec3)> {
         let d = Vec3::normalize(ray.d);
         let v = ray.p - self.c;
 
@@ -32,6 +32,6 @@ impl Shape for Sphere {
         let pi = ray.p + t * d;
         let n = Vec3::normalize(pi - self.c);
 
-        Some((pi, n))
+        Some((t, pi, n))
     }
 }

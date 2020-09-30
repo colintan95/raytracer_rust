@@ -4,7 +4,7 @@ mod geometry;
 mod shapes;
 
 use geometry::{Point3, Ray, Vec3};
-use shapes::{Shape, Sphere};
+use shapes::{Shape, Sphere, Triangle};
 
 struct Transform {
     a00: f32, a01: f32, a02: f32, a03: f32,
@@ -181,8 +181,8 @@ fn main() {
     let mut buffer = vec![100u8; num_pixels];
     let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
-    let rotate = Transform::rotate(45.0, Vec3::new(1.0, 0.0, 0.0));
-    let translate = Transform::translate(Vec3::new(0.0, 10.0, 0.0));
+    let rotate = Transform::rotate(30.0, Vec3::new(1.0, 0.0, 0.0));
+    let translate = Transform::translate(Vec3::new(0.0, 10.0, -10.0));
     let transform = translate.compose(&rotate);
 
     for i in 0..img_width {
@@ -201,27 +201,64 @@ fn main() {
         }
     } 
 
-    let sphere = Sphere {
-        c: Point3::new(0.0, 0.0, 10.0),
+    let sphere = Box::new(Sphere {
+        c: Point3::new(0.0, 2.5, 5.0),
         r: 2.5,
-    };
+    });
 
-    let light_pos = Point3::new(0.0, 5.0, 10.0);
+    let triangle1 = Box::new(Triangle {
+        p0: Point3::new(-7.5, 0.0, 0.0),
+        p1: Point3::new(-7.5, 0.0, 15.0),
+        p2: Point3::new(7.5, 0.0, 15.0),
+    });
+
+    let triangle2 = Box::new(Triangle {
+        p0: Point3::new(-7.5, 0.0, 0.0),
+        p1: Point3::new(7.5, 0.0, 15.0),
+        p2: Point3::new(7.5, 0.0, 0.0),
+    });
+
+    let mut objects: Vec<Box<dyn Shape>> = Vec::new();
+    objects.push(sphere);
+    objects.push(triangle1);
+    objects.push(triangle2); 
+
+    let light_pos = Point3::new(0.0, 10.0, 5.0);
+
+    let amb_int = 0.3;
 
     for i in 0..img_width {
         for j in 0..img_height {
-            match sphere.intersect(&rays[i * img_width + j]) {
-                Some((p, n)) => {
-                    let l = Vec3::normalize(light_pos - p);
-                    let int_d = (Vec3::dot(l, n)).max(0.0);
-                    let int_a = 0.3;
-                    
-                    let int_total = num::clamp(int_a + int_d, 0.0, 1.0);
-                    
-                    buffer[i * img_width + j] = (255.0 * int_total) as u8;
-                },
-                None => buffer[i * img_width + j] = 100,
+            let ray = &rays[i * img_width + j];
+
+            let mut min_t = f32::MAX;
+            let mut current_n = Vec3::new(0.0, 0.0, 0.0);
+
+            for shape in &objects {
+                match shape.intersect(ray) {
+                    Some((t,_,n)) => {
+                        if t < min_t {
+                            min_t = t;
+                            current_n = n;
+                        }
+                    },
+                    None => (), 
+                }
             }
+
+            let mut total_int = amb_int;
+            
+            if min_t < f32::MAX {
+                let p = ray.p + min_t * ray.d;
+                let n = current_n;
+
+                let l = Vec3::normalize(light_pos - p);
+                let diff_int = (Vec3::dot(l, n)).max(0.0);
+                
+                total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
+            } 
+               
+            buffer[i * img_width + j] = (255.0 * total_int) as u8;
         }
     }
 

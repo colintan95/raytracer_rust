@@ -8,7 +8,7 @@ pub struct Triangle {
 }
 
 impl Shape for Triangle {
-    fn intersect(&self, ray: &Ray) -> Option<(Point3, Vec3)> {
+    fn intersect(&self, ray: &Ray) -> Option<(f32, Point3, Vec3)> {
         let vp = ray.p - self.p0;
         let v1 = self.p1 - self.p0;
         let v2 = self.p2 - self.p0;
@@ -42,7 +42,7 @@ impl Shape for Triangle {
                 n = -n;
             }
             // TODO: Test that the normal returned is correct.
-            Some((pi, n))
+            Some((t, pi, n))
         } else {
             None
         }
