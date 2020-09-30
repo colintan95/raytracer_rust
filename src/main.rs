@@ -79,58 +79,25 @@ impl<'a, 'b>  Mul<&'b Mat4> for &'a Mat4 {
 }
 
 struct Transform {
-    a00: f32, a01: f32, a02: f32, a03: f32,
-    a10: f32, a11: f32, a12: f32, a13: f32,
-    a20: f32, a21: f32, a22: f32, a23: f32,
-    a30: f32, a31: f32, a32: f32, a33: f32,
+    mat: Mat4,
 }
 
 impl Transform {
     fn identity() -> Transform {
         Transform {
-            a00: 1.0,
-            a01: 0.0,
-            a02: 0.0,
-            a03: 0.0,
-
-            a10: 0.0,
-            a11: 1.0,
-            a12: 0.0,
-            a13: 0.0,
-
-            a20: 0.0,
-            a21: 0.0,
-            a22: 1.0,
-            a23: 0.0,
-
-            a30: 0.0,
-            a31: 0.0,
-            a32: 0.0,
-            a33: 1.0,
+            mat: Mat4::new(1.0, 0.0, 0.0, 0.0,
+                           0.0, 1.0, 0.0, 0.0,
+                           0.0, 0.0, 1.0, 0.0,
+                           0.0, 0.0, 0.0, 1.0),
         }
     }
 
     fn translate(delta: Vec3) -> Transform {
         Transform {
-            a00: 1.0,
-            a01: 0.0,
-            a02: 0.0,
-            a03: delta.x,
-
-            a10: 0.0,
-            a11: 1.0,
-            a12: 0.0,
-            a13: delta.y,
-
-            a20: 0.0,
-            a21: 0.0,
-            a22: 1.0,
-            a23: delta.z,
-
-            a30: 0.0,
-            a31: 0.0,
-            a32: 0.0,
-            a33: 1.0,
+            mat: Mat4::new(1.0, 0.0, 0.0, delta.x,
+                           0.0, 1.0, 0.0, delta.y,
+                           0.0, 0.0, 1.0, delta.z,
+                           0.0, 0.0, 0.0, 1.0),
         }
     }
 
@@ -142,82 +109,49 @@ impl Transform {
         let cos_theta = theta.to_radians().cos();
     
         Transform {
-            a00: axis.x * axis.x + (1.0 - axis.x * axis.x) * cos_theta,
-            a01: axis.x * axis.y * (1.0 - cos_theta) - axis.z * sin_theta,
-            a02: axis.x * axis.z * (1.0 - cos_theta) + axis.y * sin_theta,
-            a03: 0.0,
+            mat: Mat4::new(
+                axis.x * axis.x + (1.0 - axis.x * axis.x) * cos_theta,
+                axis.x * axis.y * (1.0 - cos_theta) - axis.z * sin_theta,
+                axis.x * axis.z * (1.0 - cos_theta) + axis.y * sin_theta,
+                0.0,
 
-            a10: axis.x * axis.y * (1.0 - cos_theta) + axis.z * sin_theta,
-            a11: axis.y * axis.y + (1.0 - axis.y * axis.y) * cos_theta,
-            a12: axis.y * axis.z * (1.0 - cos_theta) - axis.x * sin_theta,
-            a13: 0.0,
+                axis.x * axis.y * (1.0 - cos_theta) + axis.z * sin_theta,
+                axis.y * axis.y + (1.0 - axis.y * axis.y) * cos_theta,
+                axis.y * axis.z * (1.0 - cos_theta) - axis.x * sin_theta,
+                0.0,
 
-            a20: axis.x * axis.z * (1.0 - cos_theta) - axis.y * sin_theta,
-            a21: axis.y * axis.z * (1.0 - cos_theta) + axis.x * sin_theta,
-            a22: axis.z * axis.z + (1.0 - axis.z * axis.z) * cos_theta,
-            a23: 0.0,
+                axis.x * axis.z * (1.0 - cos_theta) - axis.y * sin_theta,
+                axis.y * axis.z * (1.0 - cos_theta) + axis.x * sin_theta,
+                axis.z * axis.z + (1.0 - axis.z * axis.z) * cos_theta,
+                0.0,
 
-            a30: 0.0,
-            a31: 0.0,
-            a32: 0.0,
-            a33: 1.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0),
         }
     }
 
     // TODO: Replace this with multiply operator or sth.
     fn compose(&self, other: &Transform) -> Transform {
         Transform {
-            a00 : self.a00 * other.a00 + self.a01 * other.a10 + self.a02 * other.a20 +
-                  self.a03 * other.a30,
-            a01 : self.a00 * other.a01 + self.a01 * other.a11 + self.a02 * other.a21 +
-                  self.a03 * other.a31,
-            a02 : self.a00 * other.a02 + self.a01 * other.a12 + self.a02 * other.a22 +
-                  self.a03 * other.a32,
-            a03 : self.a00 * other.a03 + self.a01 * other.a13 + self.a02 * other.a23 +
-                  self.a03 * other.a33, 
-
-            a10 : self.a10 * other.a00 + self.a11 * other.a10 + self.a12 * other.a20 +
-                  self.a13 * other.a30,
-            a11 : self.a10 * other.a01 + self.a11 * other.a11 + self.a12 * other.a21 +
-                  self.a13 * other.a31,
-            a12 : self.a10 * other.a02 + self.a11 * other.a12 + self.a12 * other.a22 +
-                  self.a13 * other.a32,
-            a13 : self.a10 * other.a03 + self.a11 * other.a13 + self.a12 * other.a23 +
-                  self.a13 * other.a33, 
-
-            a20 : self.a20 * other.a00 + self.a21 * other.a10 + self.a22 * other.a20 +
-                  self.a23 * other.a30,
-            a21 : self.a20 * other.a01 + self.a21 * other.a11 + self.a22 * other.a21 +
-                  self.a23 * other.a31,
-            a22 : self.a20 * other.a02 + self.a21 * other.a12 + self.a22 * other.a22 +
-                  self.a23 * other.a32,
-            a23 : self.a20 * other.a03 + self.a21 * other.a13 + self.a22 * other.a23 +
-                  self.a23 * other.a33, 
-
-            a30 : self.a30 * other.a00 + self.a31 * other.a10 + self.a32 * other.a20 +
-                  self.a33 * other.a30,
-            a31 : self.a30 * other.a01 + self.a31 * other.a11 + self.a32 * other.a21 +
-                  self.a33 * other.a31,
-            a32 : self.a30 * other.a02 + self.a31 * other.a12 + self.a32 * other.a22 +
-                  self.a33 * other.a32,
-            a33 : self.a30 * other.a03 + self.a31 * other.a13 + self.a32 * other.a23 +
-                  self.a33 * other.a33, 
+            mat: &self.mat * &other.mat,
         }
     }
 
     fn apply_vec(&self, v: &Vec3) -> Vec3 {
         Vec3 {
-            x: self.a00 * v.x + self.a01 * v.y + self.a02 * v.z,
-            y: self.a10 * v.x + self.a11 * v.y + self.a12 * v.z,
-            z: self.a20 * v.x + self.a21 * v.y + self.a22 * v.z,
+            x: self.mat.a00 * v.x + self.mat.a01 * v.y + self.mat.a02 * v.z,
+            y: self.mat.a10 * v.x + self.mat.a11 * v.y + self.mat.a12 * v.z,
+            z: self.mat.a20 * v.x + self.mat.a21 * v.y + self.mat.a22 * v.z,
         }
     }
 
     fn apply_pt(&self, p: &Point3) -> Point3 {
         Point3 {
-            x: self.a00 * p.x + self.a01 * p.y + self.a02 * p.z + self.a03,
-            y: self.a10 * p.x + self.a11 * p.y + self.a12 * p.z + self.a13,
-            z: self.a20 * p.x + self.a21 * p.y + self.a22 * p.z + self.a23,
+            x: self.mat.a00 * p.x + self.mat.a01 * p.y + self.mat.a02 * p.z + self.mat.a03,
+            y: self.mat.a10 * p.x + self.mat.a11 * p.y + self.mat.a12 * p.z + self.mat.a13,
+            z: self.mat.a20 * p.x + self.mat.a21 * p.y + self.mat.a22 * p.z + self.mat.a23,
         }
     }
 }
