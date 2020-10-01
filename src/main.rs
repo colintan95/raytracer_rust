@@ -3,9 +3,10 @@
 mod geometry;
 mod shapes;
 
-use geometry::{Mat4, Point3, Ray, Transform, Vec3};
+use geometry::{Point3, Ray, Transform, Vec3};
 use shapes::{Shape, Sphere, Triangle};
 
+// TODO: How to deal with numerical inaccuracies more generally.
 fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
     let epsilon = 0.0001;
     let is_equal = (v1.x - v2.x).abs() < epsilon &&     
@@ -27,6 +28,11 @@ fn transform_test() {
     let transform3 = Transform::rotate(90.0, Vec3::new(0.0, 0.0, 1.0));
     let v3 = Vec3::new(1.0, 0.0, 0.0);
     assert!(vec_equal(&transform3.apply(&v3), &Vec3::new(0.0, 1.0, 0.0)));
+}
+
+struct Object {
+    shape: Box<dyn Shape>,
+    color: (f32, f32, f32), // 0.0 to 1.0
 }
 
 fn main() {
@@ -57,27 +63,34 @@ fn main() {
         }
     } 
 
-    let sphere = Box::new(Sphere {
-        c: Point3::new(0.0, 2.5, 5.0),
-        r: 2.5,
-    });
-
-    let triangle1 = Box::new(Triangle {
-        p0: Point3::new(-7.5, 0.0, 0.0),
-        p1: Point3::new(-7.5, 0.0, 15.0),
-        p2: Point3::new(7.5, 0.0, 15.0),
-    });
-
-    let triangle2 = Box::new(Triangle {
-        p0: Point3::new(-7.5, 0.0, 0.0),
-        p1: Point3::new(7.5, 0.0, 15.0),
-        p2: Point3::new(7.5, 0.0, 0.0),
-    });
-
-    let mut objects: Vec<Box<dyn Shape>> = Vec::new();
-    objects.push(sphere);
-    objects.push(triangle1);
-    objects.push(triangle2); 
+    let objs = vec![
+        Object {
+            shape: Box::new(
+                Sphere {
+                    c: Point3::new(0.0, 2.5, 5.0),
+                    r: 2.5, 
+                }),
+            color: (1.0, 0.0, 0.0),
+        },
+        Object {
+            shape: Box::new(
+                Triangle {
+                    p0: Point3::new(-7.5, 0.0, 0.0),
+                    p1: Point3::new(-7.5, 0.0, 15.0),
+                    p2: Point3::new(7.5, 0.0, 15.0),
+                }),
+            color: (0.5, 0.5, 0.5),
+        },
+        Object {
+            shape: Box::new(
+                Triangle {
+                    p0: Point3::new(-7.5, 0.0, 0.0),
+                    p1: Point3::new(7.5, 0.0, 15.0),
+                    p2: Point3::new(7.5, 0.0, 0.0),
+                }),
+            color: (0.5, 0.5, 0.5),
+        },
+    ];
 
     let light_pos = Point3::new(0.0, 10.0, 5.0);
 
@@ -88,14 +101,16 @@ fn main() {
             let ray = &rays[i * img_width + j];
 
             let mut min_t = f32::MAX;
-            let mut current_n = Vec3::new(0.0, 0.0, 0.0);
+            let mut curr_n = Vec3::new(0.0, 0.0, 0.0);
+            let mut curr_color = (0.0, 0.0, 0.0);
 
-            for shape in &objects {
-                match shape.intersect(ray) {
+            for obj in &objs {
+                match obj.shape.intersect(ray) {
                     Some((t,_,n)) => {
                         if t < min_t {
                             min_t = t;
-                            current_n = n;
+                            curr_n = n;
+                            curr_color = obj.color;
                         }
                     },
                     None => (), 
@@ -106,13 +121,15 @@ fn main() {
             
             if min_t < f32::MAX {
                 let p = ray.p + min_t * ray.d;
-                let n = current_n;
+                let n = curr_n;
 
                 let l = Vec3::normalize(light_pos - p);
                 let diff_int = (Vec3::dot(l, n)).max(0.0);
                 
                 total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
             } 
+
+            total_int *= curr_color.0;
                
             buffer[i * img_width + j] = (255.0 * total_int) as u8;
         }
