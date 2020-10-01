@@ -19,15 +19,15 @@ fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
 fn transform_test() {
     let transform1 = Transform::rotate(90.0, Vec3::new(0.0, 1.0, 0.0));
     let v1 = Vec3::new(0.0, 0.0, 1.0); 
-    assert!(vec_equal(&transform1.apply(&v1), &Vec3::new(1.0, 0.0, 0.0)));
+    assert!(vec_equal(&transform1.apply_vec(&v1), &Vec3::new(1.0, 0.0, 0.0)));
 
     let transform2 = Transform::rotate(90.0, Vec3::new(1.0, 0.0, 0.0));
     let v2 = Vec3::new(0.0, 1.0, 0.0);
-    assert!(vec_equal(&transform2.apply(&v2), &Vec3::new(0.0, 0.0, 1.0)));
+    assert!(vec_equal(&transform2.apply_vec(&v2), &Vec3::new(0.0, 0.0, 1.0)));
 
     let transform3 = Transform::rotate(90.0, Vec3::new(0.0, 0.0, 1.0));
     let v3 = Vec3::new(1.0, 0.0, 0.0);
-    assert!(vec_equal(&transform3.apply(&v3), &Vec3::new(0.0, 1.0, 0.0)));
+    assert!(vec_equal(&transform3.apply_vec(&v3), &Vec3::new(0.0, 1.0, 0.0)));
 }
 
 struct Object {
@@ -133,7 +133,7 @@ fn main() {
 
                 let mut is_blocked = false;
 
-                // Check if any other object is blocking the light source.
+                // Check if any object is blocking the light source.
                 for obj in &objs {
                     match obj.shape.intersect(&diff_ray) {
                         Some(_) => {
@@ -144,7 +144,6 @@ fn main() {
                     }
                 }
 
-                // Generates shadows.
                 if !is_blocked {
                     let diff_int = (Vec3::dot(l, n)).max(0.0);
                     

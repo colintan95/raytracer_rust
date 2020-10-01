@@ -67,7 +67,7 @@ mod tests {
         };
 
         match triangle1.intersect(&ray1) {
-            Some((p, n)) => {
+            Some((_, p, n)) => {
                 assert_eq!(p, Point3::new(0.0, 0.0, 2.0));
                 assert_eq!(n, Vec3::new(0.0, 0.0, -1.0));
             },
