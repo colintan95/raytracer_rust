@@ -39,8 +39,9 @@ fn main() {
     let img_width = 800;
     let img_height = 800;
     let num_pixels = img_width * img_height;
+    let num_channels = 3;
 
-    let mut buffer = vec![100u8; num_pixels];
+    let mut buffer = vec![100u8; num_pixels * num_channels];
     let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
     let rotate = Transform::rotate(30.0, Vec3::new(1.0, 0.0, 0.0));
@@ -129,13 +130,15 @@ fn main() {
                 total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
             } 
 
-            total_int *= curr_color.0;
-               
-            buffer[i * img_width + j] = (255.0 * total_int) as u8;
+            let base_idx = (i * img_width + j) * 3; 
+            
+            buffer[base_idx + 0] = (255.0 * total_int * curr_color.0) as u8;
+            buffer[base_idx + 1] = (255.0 * total_int * curr_color.2) as u8;
+            buffer[base_idx + 2] = (255.0 * total_int * curr_color.2) as u8;
         }
     }
 
     image::save_buffer("/mnt/disk2/rust/image.png", &buffer, img_width as u32, img_height as u32, 
-                       image::ColorType::L8)
+                       image::ColorType::Rgb8)
         .unwrap(); 
 }
