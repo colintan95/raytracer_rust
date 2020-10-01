@@ -68,7 +68,7 @@ fn main() {
         Object {
             shape: Box::new(
                 Sphere {
-                    c: Point3::new(0.0, 2.5, 5.0),
+                    c: Point3::new(0.0, 2.5, 7.5),
                     r: 2.5, 
                 }),
             color: (1.0, 0.0, 0.0),
@@ -80,7 +80,7 @@ fn main() {
                     p1: Point3::new(-7.5, 0.0, 15.0),
                     p2: Point3::new(7.5, 0.0, 15.0),
                 }),
-            color: (0.5, 0.5, 0.5),
+            color: (1.0, 1.0, 1.0),
         },
         Object {
             shape: Box::new(
@@ -89,11 +89,11 @@ fn main() {
                     p1: Point3::new(7.5, 0.0, 15.0),
                     p2: Point3::new(7.5, 0.0, 0.0),
                 }),
-            color: (0.5, 0.5, 0.5),
+            color: (1.0, 1.0, 1.0),
         },
     ];
 
-    let light_pos = Point3::new(0.0, 10.0, 5.0);
+    let light_pos = Point3::new(0.0, 10.0, 7.5);
 
     let amb_int = 0.3;
 
@@ -123,11 +123,33 @@ fn main() {
             if min_t < f32::MAX {
                 let p = ray.p + min_t * ray.d;
                 let n = curr_n;
-
                 let l = Vec3::normalize(light_pos - p);
-                let diff_int = (Vec3::dot(l, n)).max(0.0);
-                
-                total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
+
+                // Offset to prevent aliasing.
+                let diff_ray = Ray {
+                    p: p + 0.001 * n,
+                    d: light_pos - (p + 0.001 * n),
+                };
+
+                let mut is_blocked = false;
+
+                // Check if any other object is blocking the light source.
+                for obj in &objs {
+                    match obj.shape.intersect(&diff_ray) {
+                        Some(_) => {
+                            is_blocked = true;
+                            break;
+                        },
+                        None => is_blocked = false,
+                    }
+                }
+
+                // Generates shadows.
+                if !is_blocked {
+                    let diff_int = (Vec3::dot(l, n)).max(0.0);
+                    
+                    total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
+                }
             } 
 
             let base_idx = (i * img_width + j) * 3; 

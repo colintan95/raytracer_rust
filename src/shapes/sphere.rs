@@ -32,6 +32,10 @@ impl Shape for Sphere {
         let pi = ray.p + t * d;
         let n = Vec3::normalize(pi - self.c);
 
-        Some((t, pi, n))
+        if t < 0.0 {
+            None
+        } else {
+            Some((t, pi, n))
+        }
     }
 }
