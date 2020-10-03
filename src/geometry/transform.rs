@@ -24,6 +24,15 @@ impl Transform {
         }
     }
 
+    pub fn translate_pt(pt: Point3) -> Transform {
+        Transform {
+            mat: Mat4::new(1.0, 0.0, 0.0, pt.x,
+                           0.0, 1.0, 0.0, pt.y,
+                           0.0, 0.0, 1.0, pt.z,
+                           0.0, 0.0, 0.0, 1.0),
+        }
+    }
+
     // |theta| is in degrees.
     pub fn rotate(theta: f32, axis: Vec3) -> Transform {
         let axis = Vec3::normalize(axis);

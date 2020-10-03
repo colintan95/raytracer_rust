@@ -44,8 +44,10 @@ fn main() {
     let mut buffer = vec![100u8; num_pixels * num_channels];
     let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
+    let camera_pos = Point3::new(0.0, 10.0, -10.0);
+
     let rotate = Transform::rotate(30.0, Vec3::new(1.0, 0.0, 0.0));
-    let translate = Transform::translate(Vec3::new(0.0, 10.0, -10.0));
+    let translate = Transform::translate_pt(camera_pos);
     let transform = translate.compose(&rotate);
 
     for i in 0..img_width {
@@ -64,42 +66,55 @@ fn main() {
         }
     } 
 
+    let plane_width = 20.0;
+    let plane_depth = 20.0;
+
     let objs = vec![
         Object {
             shape: Box::new(
                 Sphere {
-                    c: Point3::new(0.0, 2.5, 7.5),
+                    c: Point3::new(-3.5, 2.5, 7.5),
                     r: 2.5, 
                 }),
             color: (1.0, 0.0, 0.0),
         },
         Object {
             shape: Box::new(
+                Sphere {
+                    c: Point3::new(3.5, 2.5, 7.5),
+                    r: 2.5, 
+                }),
+            color: (0.0, 0.0, 1.0),
+        },
+        Object {
+            shape: Box::new(
                 Triangle {
-                    p0: Point3::new(-7.5, 0.0, 0.0),
-                    p1: Point3::new(-7.5, 0.0, 15.0),
-                    p2: Point3::new(7.5, 0.0, 15.0),
+                    p0: Point3::new(-plane_width / 2.0, 0.0, 0.0),
+                    p1: Point3::new(-plane_width / 2.0, 0.0, plane_depth),
+                    p2: Point3::new(plane_width / 2.0, 0.0, plane_depth),
                 }),
             color: (1.0, 1.0, 1.0),
         },
         Object {
             shape: Box::new(
                 Triangle {
-                    p0: Point3::new(-7.5, 0.0, 0.0),
-                    p1: Point3::new(7.5, 0.0, 15.0),
-                    p2: Point3::new(7.5, 0.0, 0.0),
+                    p0: Point3::new(-plane_width / 2.0, 0.0, 0.0),
+                    p1: Point3::new(plane_width / 2.0, 0.0, plane_depth),
+                    p2: Point3::new(plane_width / 2.0, 0.0, 0.0),
                 }),
             color: (1.0, 1.0, 1.0),
         },
     ];
 
-    let light_pos = Point3::new(0.0, 10.0, 7.5);
+    let lights = vec![Point3::new(0.0, 10.0, 10.0), Point3::new(0.0, 10.0, 5.0)];
 
     let amb_int = 0.3;
 
     for i in 0..img_width {
         for j in 0..img_height {
             let ray = &rays[i * img_width + j];
+
+            let mut pixel_rgb = (0.0, 0.0, 0.0);
 
             let mut min_t = f32::MAX;
             let mut curr_n = Vec3::new(0.0, 0.0, 0.0);
@@ -118,44 +133,57 @@ fn main() {
                 }
             }
 
-            let mut total_int = amb_int;
-            
             if min_t < f32::MAX {
-                let p = ray.p + min_t * ray.d;
-                let n = curr_n;
-                let l = Vec3::normalize(light_pos - p);
+                let mut total_int = amb_int;
 
-                // Offset to prevent aliasing.
-                let diff_ray = Ray {
-                    p: p + 0.001 * n,
-                    d: light_pos - (p + 0.001 * n),
-                };
+                for light_pos in &lights {
+                    let p = ray.p + min_t * ray.d;
+                    let n = curr_n;
+                    let l = Vec3::normalize(*light_pos - p);
 
-                let mut is_blocked = false;
+                    // Offset to prevent aliasing.
+                    let diff_ray = Ray {
+                        p: p + 0.001 * n,
+                        d: *light_pos - (p + 0.001 * n),
+                    };
 
-                // Check if any object is blocking the light source.
-                for obj in &objs {
-                    match obj.shape.intersect(&diff_ray) {
-                        Some(_) => {
-                            is_blocked = true;
-                            break;
-                        },
-                        None => is_blocked = false,
+                    let mut is_blocked = false;
+
+                    // Check if any object is blocking the light source.
+                    for obj in &objs {
+                        match obj.shape.intersect(&diff_ray) {
+                            Some(_) => {
+                                is_blocked = true;
+                                break;
+                            },
+                            None => is_blocked = false,
+                        }
+                    }
+
+                    if !is_blocked {
+                        let diff_int = (Vec3::dot(l, n)).max(0.0);
+
+                        // let v = Vec3::normalize(camera_pos - p);
+                        // let h = Vec3::normalize(l + v);
+                        // 
+                        // let spec_int = 0.5 * (Vec3::dot(n, h)).max(0.0).powf(10.0);
+                        
+                        total_int += 0.5 * diff_int;
                     }
                 }
 
-                if !is_blocked {
-                    let diff_int = (Vec3::dot(l, n)).max(0.0);
-                    
-                    total_int = num::clamp(amb_int + diff_int, 0.0, 1.0);
-                }
-            } 
+                total_int = num::clamp(total_int, 0.0, 1.0);
+
+                pixel_rgb.0 = total_int * curr_color.0;
+                pixel_rgb.1 = total_int * curr_color.1;
+                pixel_rgb.2 = total_int * curr_color.2;
+            }
 
             let base_idx = (i * img_width + j) * 3; 
             
-            buffer[base_idx + 0] = (255.0 * total_int * curr_color.0) as u8;
-            buffer[base_idx + 1] = (255.0 * total_int * curr_color.2) as u8;
-            buffer[base_idx + 2] = (255.0 * total_int * curr_color.2) as u8;
+            buffer[base_idx + 0] = (255.0 * pixel_rgb.0) as u8;
+            buffer[base_idx + 1] = (255.0 * pixel_rgb.1) as u8;
+            buffer[base_idx + 2] = (255.0 * pixel_rgb.2) as u8;
         }
     }
 
