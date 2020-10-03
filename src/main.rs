@@ -6,6 +6,8 @@ mod shapes;
 use geometry::{Point3, Ray, Transform, Vec3};
 use shapes::{Shape, Sphere, Triangle};
 
+use std::ops::{Add, AddAssign, Mul, MulAssign};
+
 // TODO: How to deal with numerical inaccuracies more generally.
 fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
     let epsilon = 0.0001;
@@ -30,9 +32,101 @@ fn transform_test() {
     assert!(vec_equal(&transform3.apply_vec(&v3), &Vec3::new(0.0, 1.0, 0.0)));
 }
 
+#[derive(Debug, Copy, Clone)]
+struct Rgb {
+    r: f32,
+    g: f32,
+    b: f32,
+}
+
+impl Rgb {
+    fn new(r: f32, g: f32, b: f32) -> Self {
+        Rgb { r, g, b, }
+    }
+
+    // Truncates all components so that their values are within the range [0.0, 1.0].
+    fn clamp_to_unit(self) -> Self {
+        Rgb { 
+            r: num::clamp(self.r, 0.0, 1.0),
+            g: num::clamp(self.g, 0.0, 1.0),
+            b: num::clamp(self.b, 0.0, 1.0),
+        }
+    }
+}
+
+impl Add for Rgb {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Rgb {
+            r: self.r + rhs.r,
+            g: self.g + rhs.g,
+            b: self.b + rhs.b,
+        }
+    }
+}
+
+impl AddAssign for Rgb {
+    fn add_assign(&mut self, other: Self) {
+        self.r += other.r;
+        self.g += other.g;
+        self.b += other.b;
+    }
+}
+
+impl Mul for Rgb {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Rgb {
+            r: self.r * rhs.r,
+            g: self.g * rhs.g,
+            b: self.b * rhs.b,
+        }
+    }
+}
+
+impl Mul<f32> for Rgb {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Rgb {
+            r: self.r * rhs,
+            g: self.g * rhs,
+            b: self.b * rhs,
+        }
+    }
+}
+
+impl Mul<Rgb> for f32 {
+    type Output = Rgb;
+
+    fn mul(self, rhs: Rgb) -> Self::Output {
+        Rgb {
+            r: self * rhs.r,
+            g: self * rhs.g,
+            b: self * rhs.b,
+        }
+    }
+}
+
+impl MulAssign for Rgb {
+    fn mul_assign(&mut self, other: Self) {
+        self.r *= other.r;
+        self.g *= other.b;
+        self.b *= other.b;
+    }
+}
+
+struct Material {
+    ambient: Rgb, 
+    diffuse: Rgb,
+    specular: Rgb,
+}
+
 struct Object {
     shape: Box<dyn Shape>,
-    color: (f32, f32, f32), // 0.0 to 1.0
+    material: Material,
 }
 
 fn main() {
@@ -76,7 +170,12 @@ fn main() {
                     c: Point3::new(-3.5, 2.5, 7.5),
                     r: 2.5, 
                 }),
-            color: (1.0, 0.0, 0.0),
+            material:
+                Material {
+                    ambient: Rgb::new(0.1, 0.0, 0.0),
+                    diffuse: Rgb::new(0.5, 0.0, 0.0),
+                    specular: Rgb::new(1.0, 1.0, 1.0),
+                },
         },
         Object {
             shape: Box::new(
@@ -84,7 +183,12 @@ fn main() {
                     c: Point3::new(3.5, 2.5, 7.5),
                     r: 2.5, 
                 }),
-            color: (0.0, 0.0, 1.0),
+            material:
+                Material {
+                    ambient: Rgb::new(0.0, 0.0, 0.1),
+                    diffuse: Rgb::new(0.0, 0.0, 0.5),
+                    specular: Rgb::new(1.0, 1.0, 1.0),
+                },
         },
         Object {
             shape: Box::new(
@@ -93,7 +197,12 @@ fn main() {
                     p1: Point3::new(-plane_width / 2.0, 0.0, plane_depth),
                     p2: Point3::new(plane_width / 2.0, 0.0, plane_depth),
                 }),
-            color: (1.0, 1.0, 1.0),
+            material:
+                Material {
+                    ambient: Rgb::new(0.1, 0.1, 0.1),
+                    diffuse: Rgb::new(0.5, 0.5, 0.5),
+                    specular: Rgb::new(1.0, 1.0, 1.0),
+                },
         },
         Object {
             shape: Box::new(
@@ -102,88 +211,87 @@ fn main() {
                     p1: Point3::new(plane_width / 2.0, 0.0, plane_depth),
                     p2: Point3::new(plane_width / 2.0, 0.0, 0.0),
                 }),
-            color: (1.0, 1.0, 1.0),
+            material:
+                Material {
+                    ambient: Rgb::new(0.1, 0.1, 0.1),
+                    diffuse: Rgb::new(0.5, 0.5, 0.5),
+                    specular: Rgb::new(1.0, 1.0, 1.0),
+                },
         },
     ];
 
     let lights = vec![Point3::new(0.0, 10.0, 10.0), Point3::new(0.0, 10.0, 5.0)];
 
-    let amb_int = 0.3;
-
     for i in 0..img_width {
         for j in 0..img_height {
             let ray = &rays[i * img_width + j];
 
-            let mut pixel_rgb = (0.0, 0.0, 0.0);
-
+            let mut pixel_val = Rgb::new(0.0, 0.0, 0.0);
             let mut min_t = f32::MAX;
-            let mut curr_n = Vec3::new(0.0, 0.0, 0.0);
-            let mut curr_color = (0.0, 0.0, 0.0);
+            let mut hit_res: Option<(&Object, Vec3)> = None; 
 
             for obj in &objs {
                 match obj.shape.intersect(ray) {
                     Some((t,_,n)) => {
                         if t < min_t {
                             min_t = t;
-                            curr_n = n;
-                            curr_color = obj.color;
+                            hit_res = Some((&obj, n)); 
                         }
                     },
                     None => (), 
                 }
             }
 
-            if min_t < f32::MAX {
-                let mut total_int = amb_int;
+            match hit_res {
+                Some((obj, n)) => { 
+                    let mut total_int = obj.material.ambient;
 
-                for light_pos in &lights {
-                    let p = ray.p + min_t * ray.d;
-                    let n = curr_n;
-                    let l = Vec3::normalize(*light_pos - p);
+                    for light_pos in &lights {
+                        let p = ray.p + min_t * ray.d;
+                        let n = Vec3::normalize(n);
+                        let l = Vec3::normalize(*light_pos - p);
 
-                    // Offset to prevent aliasing.
-                    let diff_ray = Ray {
-                        p: p + 0.001 * n,
-                        d: *light_pos - (p + 0.001 * n),
-                    };
+                        // Offset to prevent aliasing.
+                        let diff_ray = Ray {
+                            p: p + 0.001 * n,
+                            d: *light_pos - (p + 0.001 * n),
+                        };
 
-                    let mut is_blocked = false;
+                        let mut is_blocked = false;
 
-                    // Check if any object is blocking the light source.
-                    for obj in &objs {
-                        match obj.shape.intersect(&diff_ray) {
-                            Some(_) => {
-                                is_blocked = true;
-                                break;
-                            },
-                            None => is_blocked = false,
+                        // Check if any object is blocking the light source.
+                        for obj in &objs {
+                            match obj.shape.intersect(&diff_ray) {
+                                Some(_) => {
+                                    is_blocked = true;
+                                    break;
+                                },
+                                None => is_blocked = false,
+                            }
+                        }
+
+                        if !is_blocked {
+                            let diff_coeff = (Vec3::dot(l, n)).max(0.0);
+
+                            // let v = Vec3::normalize(camera_pos - p);
+                            // let h = Vec3::normalize(l + v);
+                            // 
+                            // let spec_int = 0.5 * (Vec3::dot(n, h)).max(0.0).powf(10.0);
+                            
+                            total_int += diff_coeff * obj.material.diffuse; 
                         }
                     }
 
-                    if !is_blocked {
-                        let diff_int = (Vec3::dot(l, n)).max(0.0);
-
-                        // let v = Vec3::normalize(camera_pos - p);
-                        // let h = Vec3::normalize(l + v);
-                        // 
-                        // let spec_int = 0.5 * (Vec3::dot(n, h)).max(0.0).powf(10.0);
-                        
-                        total_int += 0.5 * diff_int;
-                    }
-                }
-
-                total_int = num::clamp(total_int, 0.0, 1.0);
-
-                pixel_rgb.0 = total_int * curr_color.0;
-                pixel_rgb.1 = total_int * curr_color.1;
-                pixel_rgb.2 = total_int * curr_color.2;
+                    pixel_val = total_int.clamp_to_unit(); 
+                },
+                None => (),
             }
 
             let base_idx = (i * img_width + j) * 3; 
             
-            buffer[base_idx + 0] = (255.0 * pixel_rgb.0) as u8;
-            buffer[base_idx + 1] = (255.0 * pixel_rgb.1) as u8;
-            buffer[base_idx + 2] = (255.0 * pixel_rgb.2) as u8;
+            buffer[base_idx + 0] = (255.0 * pixel_val.r) as u8;
+            buffer[base_idx + 1] = (255.0 * pixel_val.g) as u8;
+            buffer[base_idx + 2] = (255.0 * pixel_val.b) as u8;
         }
     }
 
