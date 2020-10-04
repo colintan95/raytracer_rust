@@ -249,7 +249,6 @@ fn main() {
                     for light_pos in &lights {
                         let p = ray.p + min_t * ray.d;
                         let n = Vec3::normalize(n);
-                        let l = Vec3::normalize(*light_pos - p);
 
                         // Offset to prevent aliasing.
                         let diff_ray = Ray {
@@ -271,14 +270,15 @@ fn main() {
                         }
 
                         if !is_blocked {
+                            let l = Vec3::normalize(*light_pos - p);
                             let diff_coeff = (Vec3::dot(l, n)).max(0.0);
 
-                            // let v = Vec3::normalize(camera_pos - p);
-                            // let h = Vec3::normalize(l + v);
-                            // 
-                            // let spec_int = 0.5 * (Vec3::dot(n, h)).max(0.0).powf(10.0);
+                            let v = Vec3::normalize(camera_pos - p);
+                            let h = Vec3::normalize(l + v);
+                            let spec_coeff = (Vec3::dot(n, h)).max(0.0).powf(100.0);
                             
-                            total_int += diff_coeff * obj.material.diffuse; 
+                            total_int += diff_coeff * obj.material.diffuse +
+                                         spec_coeff * obj.material.specular; 
                         }
                     }
 
