@@ -86,3 +86,32 @@ impl Transform {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // TODO: How to deal with numerical inaccuracies more generally.
+    fn vec_equal(v1: &Vec3, v2: &Vec3) -> bool {
+        let epsilon = 0.0001;
+        let is_equal = (v1.x - v2.x).abs() < epsilon &&     
+                       (v1.y - v2.y).abs() < epsilon &&  
+                       (v1.z - v2.z).abs() < epsilon;
+        is_equal
+    }
+
+    #[test]
+    fn transform_test() {
+        let transform1 = Transform::rotate(90.0, Vec3::new(0.0, 1.0, 0.0));
+        let v1 = Vec3::new(0.0, 0.0, 1.0); 
+        assert!(vec_equal(&transform1.apply_vec(&v1), &Vec3::new(1.0, 0.0, 0.0)));
+
+        let transform2 = Transform::rotate(90.0, Vec3::new(1.0, 0.0, 0.0));
+        let v2 = Vec3::new(0.0, 1.0, 0.0);
+        assert!(vec_equal(&transform2.apply_vec(&v2), &Vec3::new(0.0, 0.0, 1.0)));
+
+        let transform3 = Transform::rotate(90.0, Vec3::new(0.0, 0.0, 1.0));
+        let v3 = Vec3::new(1.0, 0.0, 0.0);
+        assert!(vec_equal(&transform3.apply_vec(&v3), &Vec3::new(0.0, 1.0, 0.0)));
+    }
+}
