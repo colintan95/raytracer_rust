@@ -1,0 +1,4 @@
+- Add BRDFs.
+- Move the rendering logic into it's own function, like Li().
+- Do raytracing recursively - up to a certain number of reflections.kj::w
+

@@ -19,13 +19,80 @@ struct Object {
     material: Material,
 }
 
+fn li(ray: &Ray, objs: &Vec::<Object>, camera_pos: Point3, lights: &Vec::<Point3>) -> Rgb {
+
+    let mut pixel_val = Rgb::new(0.0, 0.0, 0.0);
+
+    let mut min_t = f32::MAX;
+    let mut hit_res: Option<(&Object, Vec3)> = None; 
+
+    for obj in objs {
+        match obj.shape.intersect(ray) {
+            Some((t,_,n)) => {
+                if t < min_t {
+                    min_t = t;
+                    hit_res = Some((&obj, n)); 
+                }
+            },
+            None => (), 
+        }
+    }
+
+    match hit_res {
+        Some((obj, n)) => { 
+            let mut total_int = obj.material.ambient;
+
+            for light_pos in lights {
+                let p = ray.p + min_t * ray.d;
+                let n = Vec3::normalize(n);
+
+                // Offset to prevent aliasing.
+                let diff_ray = Ray {
+                    p: p + 0.001 * n,
+                    d: *light_pos - (p + 0.001 * n),
+                };
+
+                let mut is_blocked = false;
+
+                // Check if any object is blocking the light source.
+                for obj in objs {
+                    match obj.shape.intersect(&diff_ray) {
+                        Some(_) => {
+                            is_blocked = true;
+                            break;
+                        },
+                        None => is_blocked = false,
+                    }
+                }
+
+                if !is_blocked {
+                    let l = Vec3::normalize(*light_pos - p);
+                    let diff_coeff = (Vec3::dot(l, n)).max(0.0);
+
+                    let v = Vec3::normalize(camera_pos - p);
+                    let h = Vec3::normalize(l + v);
+                    let spec_coeff = (Vec3::dot(n, h)).max(0.0).powf(100.0);
+                    
+                    total_int += diff_coeff * obj.material.diffuse +
+                                 spec_coeff * obj.material.specular; 
+                }
+            }
+
+            pixel_val = total_int.clamp_to_unit(); 
+        },
+        None => (),
+    }
+
+    pixel_val
+}
+
 fn main() {
     let img_width = 800;
     let img_height = 800;
     let num_pixels = img_width * img_height;
     let num_channels = 3;
 
-    let mut buffer = vec![100u8; num_pixels * num_channels];
+    let mut buffer = vec![0u8; num_pixels * num_channels];
     let mut rays = Vec::<Ray>::with_capacity(num_pixels);
 
     let camera_pos = Point3::new(0.0, 10.0, -10.0);
@@ -116,69 +183,9 @@ fn main() {
         for j in 0..img_height {
             let ray = &rays[i * img_width + j];
 
-            let mut pixel_val = Rgb::new(0.0, 0.0, 0.0);
-            let mut min_t = f32::MAX;
-            let mut hit_res: Option<(&Object, Vec3)> = None; 
-
-            for obj in &objs {
-                match obj.shape.intersect(ray) {
-                    Some((t,_,n)) => {
-                        if t < min_t {
-                            min_t = t;
-                            hit_res = Some((&obj, n)); 
-                        }
-                    },
-                    None => (), 
-                }
-            }
-
-            match hit_res {
-                Some((obj, n)) => { 
-                    let mut total_int = obj.material.ambient;
-
-                    for light_pos in &lights {
-                        let p = ray.p + min_t * ray.d;
-                        let n = Vec3::normalize(n);
-
-                        // Offset to prevent aliasing.
-                        let diff_ray = Ray {
-                            p: p + 0.001 * n,
-                            d: *light_pos - (p + 0.001 * n),
-                        };
-
-                        let mut is_blocked = false;
-
-                        // Check if any object is blocking the light source.
-                        for obj in &objs {
-                            match obj.shape.intersect(&diff_ray) {
-                                Some(_) => {
-                                    is_blocked = true;
-                                    break;
-                                },
-                                None => is_blocked = false,
-                            }
-                        }
-
-                        if !is_blocked {
-                            let l = Vec3::normalize(*light_pos - p);
-                            let diff_coeff = (Vec3::dot(l, n)).max(0.0);
-
-                            let v = Vec3::normalize(camera_pos - p);
-                            let h = Vec3::normalize(l + v);
-                            let spec_coeff = (Vec3::dot(n, h)).max(0.0).powf(100.0);
-                            
-                            total_int += diff_coeff * obj.material.diffuse +
-                                         spec_coeff * obj.material.specular; 
-                        }
-                    }
-
-                    pixel_val = total_int.clamp_to_unit(); 
-                },
-                None => (),
-            }
+            let pixel_val = li(&ray, &objs, camera_pos, &lights);
 
             let base_idx = (i * img_width + j) * 3; 
-            
             buffer[base_idx + 0] = (255.0 * pixel_val.r) as u8;
             buffer[base_idx + 1] = (255.0 * pixel_val.g) as u8;
             buffer[base_idx + 2] = (255.0 * pixel_val.b) as u8;
