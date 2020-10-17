@@ -12,6 +12,7 @@ struct Material {
     ambient: Rgb, 
     diffuse: Rgb,
     specular: Rgb,
+    reflect: bool,
 }
 
 struct Object {
@@ -19,7 +20,8 @@ struct Object {
     material: Material,
 }
 
-fn li(ray: &Ray, objs: &Vec::<Object>, camera_pos: Point3, lights: &Vec::<Point3>) -> Rgb {
+fn li(ray: &Ray, objs: &Vec::<Object>, camera_pos: Point3, lights: &Vec::<Point3>, 
+      max_depth: i8) -> Rgb {
 
     let mut pixel_val = Rgb::new(0.0, 0.0, 0.0);
 
@@ -41,9 +43,10 @@ fn li(ray: &Ray, objs: &Vec::<Object>, camera_pos: Point3, lights: &Vec::<Point3
     match hit_res {
         Some((obj, n)) => { 
             let mut total_int = obj.material.ambient;
+            
+            let p = ray.p + min_t * ray.d;
 
             for light_pos in lights {
-                let p = ray.p + min_t * ray.d;
                 let n = Vec3::normalize(n);
 
                 // Offset to prevent aliasing.
@@ -76,6 +79,18 @@ fn li(ray: &Ray, objs: &Vec::<Object>, camera_pos: Point3, lights: &Vec::<Point3
                     total_int += diff_coeff * obj.material.diffuse +
                                  spec_coeff * obj.material.specular; 
                 }
+            }
+
+            if obj.material.reflect && max_depth > 0 {
+                let d = Vec3::normalize(ray.d);
+                let r = d - 2.0 * Vec3::dot(d, n) * n;
+
+                let reflect_ray = Ray {
+                    p: p,
+                    d: r,
+                };
+
+                total_int += 0.3 * li(&reflect_ray, objs, camera_pos, lights, max_depth - 1); 
             }
 
             pixel_val = total_int.clamp_to_unit(); 
@@ -132,6 +147,7 @@ fn main() {
                     ambient: Rgb::new(0.1, 0.0, 0.0),
                     diffuse: Rgb::new(0.5, 0.0, 0.0),
                     specular: Rgb::new(1.0, 1.0, 1.0),
+                    reflect: true,
                 },
         },
         Object {
@@ -145,6 +161,7 @@ fn main() {
                     ambient: Rgb::new(0.0, 0.0, 0.1),
                     diffuse: Rgb::new(0.0, 0.0, 0.5),
                     specular: Rgb::new(1.0, 1.0, 1.0),
+                    reflect: false,
                 },
         },
         Object {
@@ -159,6 +176,7 @@ fn main() {
                     ambient: Rgb::new(0.1, 0.1, 0.1),
                     diffuse: Rgb::new(0.5, 0.5, 0.5),
                     specular: Rgb::new(1.0, 1.0, 1.0),
+                    reflect: false,
                 },
         },
         Object {
@@ -173,6 +191,7 @@ fn main() {
                     ambient: Rgb::new(0.1, 0.1, 0.1),
                     diffuse: Rgb::new(0.5, 0.5, 0.5),
                     specular: Rgb::new(1.0, 1.0, 1.0),
+                    reflect: false,
                 },
         },
     ];
@@ -183,7 +202,7 @@ fn main() {
         for j in 0..img_height {
             let ray = &rays[i * img_width + j];
 
-            let pixel_val = li(&ray, &objs, camera_pos, &lights);
+            let pixel_val = li(&ray, &objs, camera_pos, &lights, 1);
 
             let base_idx = (i * img_width + j) * 3; 
             buffer[base_idx + 0] = (255.0 * pixel_val.r) as u8;
